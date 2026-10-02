@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import {
   Coins, Wallet, TrendingUp, Bell, Plus,
   RefreshCw, UserPlus, AlertTriangle, Gauge,
-  ShieldCheck, ArrowRight, Settings,
+  ArrowRight, Settings,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell,
 } from "recharts";
 
 import Navbar from "@/components/Navbar";
@@ -28,6 +29,44 @@ import { formatToken, toHuman } from "@/utils/formatCurrency";
 import { shortenAddress } from "@/utils/formatAddress";
 import { MOCK_CHILD_ADDRESS, MOCK_WEEKLY_SPENDING } from "@/services/mockData";
 
+// ── Spending breakdown demo data ────────────────────────
+const BREAKDOWN_DEMO = [
+  { name: "Entertainment", value: 12, color: "#10b981" },
+  { name: "Food",          value: 2,  color: "#3b82f6" },
+  { name: "Income",        value: 5,  color: "#ec4899" },
+  { name: "Other",         value: 19, color: "#8b5cf6" },
+  { name: "Savings",       value: 8,  color: "#ef4444" },
+  { name: "Utilities",     value: 53, color: "#f59e0b" },
+];
+
+// ── Legend rendered below the donut ────────────────────
+function BreakdownLegend({ data }) {
+  return (
+    <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mt-4">
+      {data.map((entry) => (
+        <span key={entry.name} className="flex items-center gap-1.5 text-xs text-gray-500">
+          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+          <span className="font-semibold text-gray-700">{entry.value}%</span> {entry.name}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ── Custom donut tooltip ────────────────────────────────
+function DonutTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0];
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-md text-xs">
+      <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: d.payload.color }} />
+      <span className="font-semibold text-gray-800">{d.name}</span>
+      <span className="ml-2 text-gray-500">{d.value}%</span>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────
 export default function ParentDashboard() {
   const navigate = useNavigate();
   const { account, isDemoMode } = useWallet();
@@ -45,7 +84,8 @@ export default function ParentDashboard() {
     loading, demoMode, refetch,
   } = useAllowance(childAddress || (isDemoMode ? MOCK_CHILD_ADDRESS : null));
 
-  const chartData    = demoMode ? MOCK_WEEKLY_SPENDING : buildChartData(transactions);
+  const chartData      = demoMode ? MOCK_WEEKLY_SPENDING : buildChartData(transactions);
+  const breakdownData  = demoMode ? BREAKDOWN_DEMO       : buildBreakdown(transactions);
   const totalAllocated = childDetails?.allowanceBalance ?? 0n;
   const dailySpent     = childDetails?.dailySpent ?? 0n;
 
@@ -72,9 +112,7 @@ export default function ParentDashboard() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Parent Dashboard</h1>
               <p className="text-sm text-gray-400 mt-0.5">
-                {demoMode
-                  ? "Demo Mode — data is simulated."
-                  : "Manage your child's allowance and spending."}
+                {demoMode ? "Demo Mode — data is simulated." : "Manage your child's allowance and spending."}
               </p>
             </div>
             <div className="flex gap-2 flex-wrap">
@@ -132,9 +170,7 @@ export default function ParentDashboard() {
             </div>
           )}
 
-          {/* ════════════════════════════════════════════════════
-              TOP STATS — Total Allowance · Remaining · Today · Pending
-          ═════════════════════════════════════════════════════ */}
+          {/* ── Stats row ────────────────────────────────────── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard
               title="Total Allowance"
@@ -171,15 +207,13 @@ export default function ParentDashboard() {
             />
           </div>
 
-          {/* ════════════════════════════════════════════════════
-              MAIN GRID
-          ═════════════════════════════════════════════════════ */}
+          {/* ── Main grid ────────────────────────────────────── */}
           <div className="grid lg:grid-cols-3 gap-6">
 
-            {/* ── Left column ─────────────────────────────────── */}
+            {/* Left column */}
             <div className="lg:col-span-2 space-y-6">
 
-              {/* Weekly spending chart */}
+              {/* Weekly spending bar chart */}
               <div className="card">
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="section-title">Weekly Spending</h3>
@@ -196,6 +230,38 @@ export default function ParentDashboard() {
                 </ResponsiveContainer>
               </div>
 
+              {/* ══════ Spending Breakdown donut chart ══════ */}
+              <div className="card">
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp size={16} className="text-emerald-500" />
+                  <h3 className="section-title">Spending Breakdown</h3>
+                  {demoMode && <span className="badge-info text-xs ml-auto">Demo data</span>}
+                </div>
+                <p className="text-xs text-gray-400 mb-3">Category breakdown of child's spending</p>
+
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={breakdownData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={58}
+                      outerRadius={92}
+                      paddingAngle={3}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {breakdownData.map((entry, i) => (
+                        <Cell key={`cell-${i}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<DonutTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                <BreakdownLegend data={breakdownData} />
+              </div>
+
               {/* Allowance + limit cards */}
               <div className="grid sm:grid-cols-2 gap-6">
                 <AllowanceCard
@@ -210,35 +276,20 @@ export default function ParentDashboard() {
                 />
               </div>
 
-              {/* Quick action buttons */}
+              {/* Quick action tiles */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <button
-                  onClick={() => navigate("/parent/allowance")}
-                  className="card p-4 flex flex-col items-start gap-2 hover:shadow-card-hover transition-shadow cursor-pointer border-2 border-transparent hover:border-brand/10 text-left"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
-                    <Coins size={17} className="text-brand-light" />
-                  </div>
+                <button onClick={() => navigate("/parent/allowance")} className="card p-4 flex flex-col items-start gap-2 hover:shadow-card-hover transition-shadow cursor-pointer border-2 border-transparent hover:border-brand/10 text-left">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center"><Coins size={17} className="text-brand-light" /></div>
                   <p className="text-sm font-semibold text-gray-800">Set Allowance</p>
                   <p className="text-xs text-gray-400">Deposit mUSDC</p>
                 </button>
-                <button
-                  onClick={() => navigate("/parent/settings")}
-                  className="card p-4 flex flex-col items-start gap-2 hover:shadow-card-hover transition-shadow cursor-pointer border-2 border-transparent hover:border-brand/10 text-left"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-cyan-50 flex items-center justify-center">
-                    <Gauge size={17} className="text-cyan-600" />
-                  </div>
+                <button onClick={() => navigate("/parent/settings")} className="card p-4 flex flex-col items-start gap-2 hover:shadow-card-hover transition-shadow cursor-pointer border-2 border-transparent hover:border-brand/10 text-left">
+                  <div className="w-9 h-9 rounded-xl bg-cyan-50 flex items-center justify-center"><Gauge size={17} className="text-cyan-600" /></div>
                   <p className="text-sm font-semibold text-gray-800">Set Daily Limit</p>
                   <p className="text-xs text-gray-400">Configure cap</p>
                 </button>
-                <button
-                  onClick={() => navigate("/parent/transactions")}
-                  className="card p-4 flex flex-col items-start gap-2 hover:shadow-card-hover transition-shadow cursor-pointer border-2 border-transparent hover:border-brand/10 text-left"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center">
-                    <ArrowRight size={17} className="text-purple-500" />
-                  </div>
+                <button onClick={() => navigate("/parent/transactions")} className="card p-4 flex flex-col items-start gap-2 hover:shadow-card-hover transition-shadow cursor-pointer border-2 border-transparent hover:border-brand/10 text-left">
+                  <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center"><ArrowRight size={17} className="text-purple-500" /></div>
                   <p className="text-sm font-semibold text-gray-800">All Transactions</p>
                   <p className="text-xs text-gray-400">Full history</p>
                 </button>
@@ -253,7 +304,7 @@ export default function ParentDashboard() {
               />
             </div>
 
-            {/* ── Right column ────────────────────────────────── */}
+            {/* Right column */}
             <div className="space-y-6">
 
               {/* Child profile */}
@@ -270,9 +321,7 @@ export default function ParentDashboard() {
                     <Bell size={16} className="text-brand-light" />
                     <h3 className="section-title">Pending Requests</h3>
                   </div>
-                  {pendingRequests.length > 0 && (
-                    <span className="badge-pending">{pendingRequests.length}</span>
-                  )}
+                  {pendingRequests.length > 0 && <span className="badge-pending">{pendingRequests.length}</span>}
                 </div>
 
                 {loading ? (
@@ -306,7 +355,7 @@ export default function ParentDashboard() {
                 )}
               </div>
 
-              {/* Approved recipients list */}
+              {/* Approved recipients */}
               <WhitelistManager
                 childAddress={childAddress || (isDemoMode ? MOCK_CHILD_ADDRESS : "")}
                 approvedRecipients={approvedRecipients}
@@ -335,7 +384,6 @@ export default function ParentDashboard() {
         </main>
       </div>
 
-      {/* Approval modal */}
       <ApprovalModal
         isOpen={!!approvalTarget}
         request={approvalTarget}
@@ -345,6 +393,8 @@ export default function ParentDashboard() {
     </div>
   );
 }
+
+// ── Helpers ──────────────────────────────────────────────
 
 function buildChartData(transactions) {
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -358,4 +408,28 @@ function buildChartData(transactions) {
     totals[day] = (totals[day] ?? 0) + toHuman(tx.amount);
   });
   return days.map((day) => ({ day, amount: Number((totals[day] ?? 0).toFixed(2)) }));
+}
+
+function buildBreakdown(transactions) {
+  const COLORS = {
+    "School Store":   "#10b981",
+    "Bookshop":       "#3b82f6",
+    "Lunch Canteen":  "#ec4899",
+    "Direct Payment": "#8b5cf6",
+    "Other":          "#f59e0b",
+  };
+  const totals = {};
+  let grand = 0;
+  transactions.forEach((tx) => {
+    if (tx.status !== "success") return;
+    const cat = tx.label ?? tx.type ?? "Other";
+    totals[cat] = (totals[cat] ?? 0) + toHuman(tx.amount);
+    grand += toHuman(tx.amount);
+  });
+  if (grand === 0) return BREAKDOWN_DEMO;
+  return Object.entries(totals).map(([name, value]) => ({
+    name,
+    value: Math.round((value / grand) * 100),
+    color: COLORS[name] ?? "#94a3b8",
+  }));
 }
