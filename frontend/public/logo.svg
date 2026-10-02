@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- Shield background -->
+  <path d="M24 4L6 12v12c0 10.5 7.7 20.3 18 22.9C34.3 44.3 42 34.5 42 24V12L24 4z"
+        fill="#1e3a5f"/>
+  <!-- Shield highlight -->
+  <path d="M24 4L6 12v12c0 10.5 7.7 20.3 18 22.9V4z"
+        fill="#2563eb" opacity="0.3"/>
+  <!-- Coin symbol -->
+  <circle cx="24" cy="22" r="8" fill="#06b6d4" opacity="0.9"/>
+  <text x="24" y="27" text-anchor="middle" font-family="Inter,sans-serif"
+        font-size="10" font-weight="700" fill="#ffffff">$</text>
+</svg>
