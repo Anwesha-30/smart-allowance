@@ -15,7 +15,7 @@ import LoadingSpinner from "./LoadingSpinner";
  *   request   SpendingRequest object
  *   onUpdate  () => void  — refetch after action
  */
-export default function ApprovalModal({ isOpen, onClose, request, onUpdate }) {
+export default function ApprovalModal({ isOpen, onClose, request, onUpdate, onDecision }) {
   const { approveRequest, rejectRequest, loading } = useKidSafe();
 
   if (!isOpen || !request) return null;
@@ -23,15 +23,17 @@ export default function ApprovalModal({ isOpen, onClose, request, onUpdate }) {
   const isActing = loading[`approve_${request.id}`] || loading[`reject_${request.id}`];
 
   async function handleApprove() {
-    await approveRequest(request.id, () => {
+    await approveRequest(request.id, (receipt) => {
       onUpdate?.();
+      onDecision?.("approved", request, receipt);
       onClose();
     });
   }
 
   async function handleReject() {
-    await rejectRequest(request.id, () => {
+    await rejectRequest(request.id, (receipt) => {
       onUpdate?.();
+      onDecision?.("rejected", request, receipt);
       onClose();
     });
   }

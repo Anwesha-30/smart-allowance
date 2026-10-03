@@ -26,7 +26,7 @@ export default function WhitelistManager({
   function validateAndSet(value) {
     setNewAddress(value);
     if (value && !isValidAddress(value)) {
-      setInputError("Invalid Ethereum address.");
+      setInputError("Invalid dApp contract address.");
     } else {
       setInputError("");
     }
@@ -35,11 +35,11 @@ export default function WhitelistManager({
   async function handleAdd(e) {
     e.preventDefault();
     if (!isValidAddress(newAddress)) {
-      setInputError("Enter a valid 0x address.");
+      setInputError("Enter a valid dApp contract address (0x?).");
       return;
     }
     if (approvedRecipients.map(a => a.toLowerCase()).includes(newAddress.toLowerCase())) {
-      setInputError("Address is already whitelisted.");
+      setInputError("This dApp contract address is already approved.");
       return;
     }
     await addApprovedRecipient(childAddress, newAddress, () => {
@@ -60,7 +60,7 @@ export default function WhitelistManager({
         <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
           <ShieldCheck size={18} className="text-emerald-600" aria-hidden />
         </div>
-        <h3 className="section-title">Approved Recipients</h3>
+        <h3 className="section-title">Approved dApps</h3>
         <span className="ml-auto text-xs font-semibold text-gray-400">
           {approvedRecipients.length} address{approvedRecipients.length !== 1 ? "es" : ""}
         </span>
@@ -75,7 +75,7 @@ export default function WhitelistManager({
             onChange={(e) => validateAndSet(e.target.value)}
             placeholder="0x… recipient address"
             className={`input font-mono text-xs ${inputError ? "border-red-300 focus:border-red-400 focus:ring-red-200" : ""}`}
-            aria-label="New approved recipient address"
+            aria-label="dApp Contract Address"
             aria-invalid={!!inputError}
             aria-describedby={inputError ? "whitelist-error" : undefined}
             disabled={txLoading.addRecipient}
@@ -90,10 +90,10 @@ export default function WhitelistManager({
           type="submit"
           className="btn-primary flex-shrink-0"
           disabled={!newAddress || !!inputError || txLoading.addRecipient}
-          aria-label="Add approved recipient"
+          aria-label="Approve dApp"
         >
           {txLoading.addRecipient ? <LoadingSpinner size="sm" /> : <Plus size={16} />}
-          Add
+          Approve dApp
         </button>
       </form>
 
@@ -105,11 +105,11 @@ export default function WhitelistManager({
       ) : approvedRecipients.length === 0 ? (
         <div className="empty-state py-8">
           <ShieldCheck size={28} className="text-gray-200 mb-2" aria-hidden />
-          <p className="text-gray-400 text-sm font-medium">No approved recipients yet.</p>
-          <p className="text-gray-300 text-xs mt-1">Add an address above to allow payments.</p>
+          <p className="text-gray-400 text-sm font-medium">No approved dApps yet.</p>
+          <p className="text-gray-300 text-xs mt-1">Approve a dApp contract address above to allow payments.</p>
         </div>
       ) : (
-        <ul className="space-y-2" aria-label="Approved recipient list">
+        <ul className="space-y-2" aria-label="Approved dApp list">
           {approvedRecipients.map((addr) => (
             <li
               key={addr}
@@ -128,9 +128,10 @@ export default function WhitelistManager({
                 onClick={() => handleRemove(addr)}
                 disabled={txLoading.removeRecipient}
                 className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
-                aria-label={`Remove ${shortenAddress(addr)} from whitelist`}
+                aria-label={`Remove dApp ${shortenAddress(addr)}`}
               >
                 <Trash2 size={15} />
+                <span className="text-xs ml-1">Remove dApp</span>
               </button>
             </li>
           ))}
